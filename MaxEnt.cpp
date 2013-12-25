@@ -62,7 +62,8 @@ int alloc_initiate(float *&h,float *&h0,float *&dh,float *&mu,float *&g,float *&
 	A=(float*)VirtualAlloc(NULL,sizeof(float)*n[0]*n[1]*(2*m[0]-1)*(2*m[1]-1),MEM_COMMIT,PAGE_READWRITE);
 	if(A==NULL)
 		return 0;
-	B=(float*)VirtualAlloc(NULL,sizeof(float)*n[0]*n[1]*(2*m[0]-1)*(2*m[1]-1),MEM_COMMIT,PAGE_READWRITE);
+	//B=(float*)VirtualAlloc(NULL,sizeof(float)*n[0]*n[1]*(2*m[0]-1)*(2*m[1]-1),MEM_COMMIT,PAGE_READWRITE);
+	B=(float*)VirtualAlloc(NULL,sizeof(float)*n[0]*n[1],MEM_COMMIT,PAGE_READWRITE);
 	if(B==NULL)
 		return 0;
 	return 1;
@@ -88,7 +89,9 @@ int alloc_free(float *h,float *h0,float *dh,float *mu,float*g,float *c,float *b,
 		return 0;
 	if(VirtualFree((PVOID)A,sizeof(float)*n[0]*n[1]*(2*m[0]-1)*(2*m[1]-1),MEM_DECOMMIT)==NULL)
 		return 0;
-	if(VirtualFree((PVOID)B,sizeof(float)*n[0]*n[1]*(2*m[0]-1)*(2*m[1]-1),MEM_DECOMMIT)==NULL)
+	//if(VirtualFree((PVOID)B,sizeof(float)*n[0]*n[1]*(2*m[0]-1)*(2*m[1]-1),MEM_DECOMMIT)==NULL)
+	//	return 0;
+	if(VirtualFree((PVOID)B,sizeof(float)*n[0]*n[1],MEM_DECOMMIT)==NULL)
 		return 0;
 	return 1;
 }
@@ -663,7 +666,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("Enter file path and name:\n");
 	//scanf("%s",filename);
 	//if(strlen(filename)<=1)
-		strcpy(filename,"F:\\MaxEnt\\test400.BMP");
+		strcpy(filename,"F:\\MaxEnt\\test512.BMP");
 
 	printf("Enter directory path to preserve images:\n");
 	//scanf("%s",directory);

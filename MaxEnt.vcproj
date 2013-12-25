@@ -86,7 +86,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="call &quot;$(DevEnvDir)..\..\vc\vcvarsall.bat&quot; x86&#x0D;&#x0A;&quot;$(DevEnvDir)..\..\vc\bin\EditBin.exe&quot; &quot;$(TargetPath)&quot;  /LARGEADDRESSAWARE"
+				CommandLine="call &quot;$(DevEnvDir)..\..\vc\vcvarsall.bat&quot; x86&#x0D;&#x0A;&quot;$(DevEnvDir)..\..\vc\bin\EditBin.exe&quot; &quot;$(TargetPath)&quot;  /LARGEADDRESSAWARE&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -160,6 +160,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="call &quot;$(DevEnvDir)..\..\vc\vcvarsall.bat&quot; x86&#x0D;&#x0A;&quot;$(DevEnvDir)..\..\vc\bin\EditBin.exe&quot; &quot;$(TargetPath)&quot;  /LARGEADDRESSAWARE&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
