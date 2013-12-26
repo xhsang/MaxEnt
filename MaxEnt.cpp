@@ -16,8 +16,8 @@
 #define g(i,j) (*(g+((int)(i))*n[1]+(int)(j)))
 #define mu(i,j) (*(mu+((int)(i))*n[1]+(int)(j)))
 #define c(i,j) (*(c+((int)(i))*m[1]+(int)(j)))
-#define A(i,j,k) (*(A+(i)*n[1]*(2*m[0]-1)*(2*m[1]-1)+(j)*(2*m[0]-1)*(2*m[1]-1)+k))
-#define B(i,j,k) (*(B+(i)*n[1]*(2*m[0]-1)*(2*m[1]-1)+(j)*(2*m[0]-1)*(2*m[1]-1)+k))
+#define A(i,j,k,l) (*(A+(i)*n[1]*(2*m[0]-1)*(2*m[1]-1)+(j)*(2*m[0]-1)*(2*m[1]-1)+k*(2*m[1]-1)+l))
+#define B(i,j,k,l) (*(B+(i)*n[1]*(2*m[0]-1)*(2*m[1]-1)+(j)*(2*m[0]-1)*(2*m[1]-1)+k*(2*m[1]-1)+l))
 #define Max_Iteration 500
 #define ERR 0.001
 
@@ -345,6 +345,9 @@ int get_g(float *g,float *h,float *h0,float *c,float *b,float *sigma,float alfa)
 int get_L_gradient2(float *A,float *c)
 {
 	int s,t,x,y,p,q,count;
+	int count_max=0;
+	int count_sum=0;
+	int indexx,indexy;
 	for(s=0;s<n[0];s++)
 	{
 		for(t=0;t<n[1];t++)
@@ -358,7 +361,9 @@ int get_L_gradient2(float *A,float *c)
 				{
 					if(y<0||y>n[1]-1)
 						continue;
-					A(s,t,count)=0;
+					indexx=x-(s+1-m[0]);
+					indexy=y-(t+1-m[1]);
+					A(s,t,indexx,indexy)=0;
 					for(p=max(s+1-m[0],x+1-m[0]);p<=min(s,x);p++)
 					{
 						if(p<0||p>N[0]-1)
@@ -367,17 +372,24 @@ int get_L_gradient2(float *A,float *c)
 						{
 							if(q<0||q>N[1]-1)
 								continue;
-							A(s,t,count)+=c(m[0]-s+p-1,m[1]-t+q-1)*c(m[0]-x+p-1,m[1]-y+q-1);
+							A(s,t,indexx,indexy)+=c(m[0]-s+p-1,m[1]-t+q-1)*c(m[0]-x+p-1,m[1]-y+q-1);
 						}
 					}
 					count++;
 				}
 			}
+			count_sum+=count;
+			if(count>count_max)
+				count_max=count;
 		}
 	}
+	printf("count_max=%d\n",count_max);
+	printf("count_sum=%d\n",count_sum);
 	return 1;
 }
 
+//this function can be replaced, B needs very large memory, which is not necessary
+//by roemoving B, the program can now handle 512*512, but not 1K by 1K yet
 int get_AB(float *A,float *B,float *c,float *mu,float beta)
 {
 	int s,t,x,y,count;
@@ -394,9 +406,9 @@ int get_AB(float *A,float *B,float *c,float *mu,float beta)
 				{
 					if(y<0||y>n[1]-1)
 						continue;
-					B(s,t,count)=A(s,t,count)*sqrt(mu(s,t)*mu(x,y));
+					//B(s,t,count)=A(s,t,count)*sqrt(mu(s,t)*mu(x,y));
 					if(s==x&&t==y)
-						B(s,t,count)+=beta;
+						;//B(s,t,count)+=beta;
 					count++;
 				}
 			}
@@ -405,7 +417,19 @@ int get_AB(float *A,float *B,float *c,float *mu,float beta)
 	return 1;
 }
 
-int get_dh_SOR(float *B,float *mu,float *g,float *dh,float *h)
+//indexx=x-(s+1-m[0]); when s==x, indexx=m[0]-1;
+//indexy=y-(t+1-m[1]); when t==y, indexy=m[1]-1;
+inline float get_B(float *A,float *mu,float beta,int i, int j, int k, int l)
+{
+	int indexx=k-(i+1-m[0]);
+	int indexy=l-(j+1-m[1]);
+	if(i==k && j==l)
+		return A(i,j,indexx,indexy)*sqrt(mu(i,j)*mu(k,l))+beta;
+	else
+		return A(i,j,indexx,indexy)*sqrt(mu(i,j)*mu(k,l));
+}
+
+int get_dh_SOR(float *A,float *mu,float *g,float *dh,float *h,float beta)
 {
 	int i,j;
 	for(i=0;i<n[0];i++)
@@ -438,13 +462,14 @@ int get_dh_SOR(float *B,float *mu,float *g,float *dh,float *h)
 				{
 					for(t=max(0,j+1-m[1]);t<=min(n[1]-1,j+m[1]-1);t++)
 					{
+						
 						if(i==s&&j==t)
 						{
-							divider=B(i,j,count);
-							dh(i,j)-=B(i,j,count)*temp;
+							divider=get_B(A,mu,beta,i,j,s,t);//B(i,j,count);
+							dh(i,j)-=divider*temp;
 						}
 						else
-							dh(i,j)-=B(i,j,count)*dh(s,t);
+							dh(i,j)-=get_B(A,mu,beta,i,j,s,t)*dh(s,t);
 						count++;
 					}
 				}
@@ -621,8 +646,8 @@ int maximum_entropy(char *filename,char *p_directory,int mx,int my,float sigma_x
 		memcpy((PVOID)mu,(PVOID)h,sizeof(float)*n[0]*n[1]);
 		memcpy((PVOID)h0,(PVOID)h,sizeof(float)*n[0]*n[1]);
 		get_g(g,h,h0,c,b,sigma,alfa);
-		get_AB(A,B,c,mu,beta);
-		GS=get_dh_SOR(B,mu,g,dh,h);
+		//get_AB(A,B,c,mu,beta);
+		GS=get_dh_SOR(A,mu,g,dh,h,beta);
 		GS_total+=GS;
 		if(!GS)
 		{
@@ -664,23 +689,23 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	printf("Enter file path and name:\n");
-	//scanf("%s",filename);
-	//if(strlen(filename)<=1)
-		strcpy(filename,"F:\\MaxEnt\\test512.BMP");
+	scanf("%s",filename);
+	if(strlen(filename)<=1)
+		strcpy(filename,"F:\\MaxEnt\\test64.BMP");
 
 	printf("Enter directory path to preserve images:\n");
-	//scanf("%s",directory);
-	//if(strlen(directory)<=1)
+	scanf("%s",directory);
+	if(strlen(directory)<=1)
 		strcpy(directory,"F:\\MaxEnt\\temp");
 
 	printf("resolution:\n");
-	//scanf_s("%f",&(psf.gamma));
-	psf.gamma=2;
+	scanf_s("%f",&(psf.gamma));
+	//psf.gamma=2;
 	psf.gamma/=2;
 
 	printf("pixels/angstrom:\n");
-	//scanf("%f",&(psf.pixel_to_distance));
-	psf.pixel_to_distance=10;
+	scanf("%f",&(psf.pixel_to_distance));
+	//psf.pixel_to_distance=10;
 	//float sita0,r0;
 	//float chi,i_psf,i_gauss,chi_min=1E10,Cs_min,alfa_min,df_min,scale;
 	//int dm=19,s,t;
